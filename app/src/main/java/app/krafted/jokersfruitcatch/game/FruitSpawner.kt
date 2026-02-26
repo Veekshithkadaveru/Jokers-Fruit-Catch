@@ -10,7 +10,6 @@ class FruitSpawner(var screenWidth: Int, var fruitSize: Float = 150f) {
     private var spawnIntervalMs = 1000L
     private var baseSpeed = 10f
     
-    // Difficulty Modifiers
     var speedMultiplier = 1.0f
     var bombChanceMultiplier = 1.0f
 
@@ -30,6 +29,10 @@ class FruitSpawner(var screenWidth: Int, var fruitSize: Float = 150f) {
 
     fun removeOffScreenFruits(screenHeight: Int) {
         _activeFruits.removeAll { it.y > screenHeight.toFloat() }
+    }
+
+    fun removeFruits(fruits: Collection<Fruit>) {
+        _activeFruits.removeAll(fruits.toSet())
     }
 
     private fun spawnFruit() {

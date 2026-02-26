@@ -17,6 +17,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private var gameThread: GameThread? = null
 
     var onBasketMove: ((Float) -> Unit)? = null
+    var onFruitCaught: ((FruitType) -> Unit)? = null
+    var onFruitMissed: (() -> Unit)? = null
+    var onBombCaught: (() -> Unit)? = null
     private var basketX: Float = 0f
     private var basketWidth: Float = 0f
     private var basketHeight: Float = 0f
@@ -24,24 +27,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private var basketInitialized = false
 
     private var fruitSpawner: FruitSpawner? = null
+    private val collisionEngine = CollisionEngine()
     private var screenWidth = 0
     private var screenHeight = 0
-
-
     private var fruitSize = 0f
-
     private val bitmaps = mutableMapOf<FruitType, Bitmap>()
-
-
     private var backgroundBitmap: Bitmap? = null
     private var basketBitmap: Bitmap? = null
-
-
-    private val debugPaint = Paint().apply {
-        color = Color.WHITE
-        textSize = 50f
-        isAntiAlias = true
-    }
 
     private val fallbackBasketPaint = Paint().apply {
         color = Color.parseColor("#8B4513")
@@ -54,14 +46,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         isFocusable = true
     }
 
-
     private fun loadBitmaps(targetSize: Int) {
         val rawIds = mapOf(
-            FruitType.APPLE      to R.drawable.apple,
-            FruitType.ORANGE     to R.drawable.orange,
-            FruitType.GRAPES     to R.drawable.grapes,
+            FruitType.APPLE to R.drawable.apple,
+            FruitType.ORANGE to R.drawable.orange,
+            FruitType.GRAPES to R.drawable.grapes,
             FruitType.STRAWBERRY to R.drawable.strawberry,
-            FruitType.BOMB       to R.drawable.bomb
+            FruitType.BOMB to R.drawable.bomb
         )
         rawIds.forEach { (type, resId) ->
             bitmaps[type]?.recycle()
@@ -141,7 +132,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             basketBitmap?.recycle()
             val rawBasket = BitmapFactory.decodeResource(context.resources, R.drawable.basket)
             if (rawBasket != null) {
-                basketBitmap = Bitmap.createScaledBitmap(rawBasket, basketWidth.toInt(), basketHeight.toInt(), true)
+                basketBitmap = Bitmap.createScaledBitmap(
+                    rawBasket,
+                    basketWidth.toInt(),
+                    basketHeight.toInt(),
+                    true
+                )
                 if (rawBasket != basketBitmap) rawBasket.recycle()
             }
         }
@@ -175,25 +171,46 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     private fun update() {
-        fruitSpawner?.update()
+        val spawner = fruitSpawner ?: return
+        spawner.update()
+
         if (screenHeight > 0) {
-            fruitSpawner?.removeOffScreenFruits(screenHeight)
+            val result = collisionEngine.processFrame(
+                fruits = spawner.activeFruits,
+                basketX = basketX,
+                basketY = basketY,
+                basketWidth = basketWidth,
+                basketHeight = basketHeight,
+                screenHeight = screenHeight
+            )
+
+            if (result.caughtFruits.isNotEmpty() || result.missedFruits.isNotEmpty()) {
+                spawner.removeFruits(result.caughtFruits + result.missedFruits)
+
+                for (fruit in result.caughtFruits) {
+                    if (fruit.type == FruitType.BOMB) {
+                        onBombCaught?.invoke()
+                    } else {
+                        onFruitCaught?.invoke(fruit.type)
+                    }
+                }
+
+                for (fruit in result.missedFruits) {
+                    if (fruit.type != FruitType.BOMB) {
+                        onFruitMissed?.invoke()
+                    }
+                }
+            }
         }
     }
 
     private fun drawOnCanvas(canvas: Canvas) {
-        // Draw background
         val bg = backgroundBitmap
         if (bg != null) {
             canvas.drawBitmap(bg, 0f, 0f, null)
         } else {
             canvas.drawColor(Color.DKGRAY)
         }
-
-        canvas.drawText(
-            "Fruits spawned: ${fruitSpawner?.activeFruits?.size ?: 0}",
-            50f, 100f, debugPaint
-        )
 
         fruitSpawner?.activeFruits?.forEach { fruit ->
             val bitmap = bitmaps[fruit.type]
@@ -207,12 +224,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             }
         }
 
-        // Draw basket
         val basketImg = basketBitmap
         if (basketImg != null) {
             canvas.drawBitmap(basketImg, basketX, basketY, null)
         } else {
-
             canvas.drawRoundRect(
                 RectF(basketX, basketY, basketX + basketWidth, basketY + basketHeight),
                 20f, 20f,

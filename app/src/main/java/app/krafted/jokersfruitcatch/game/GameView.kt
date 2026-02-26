@@ -1,19 +1,59 @@
 package app.krafted.jokersfruitcatch.game
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import app.krafted.jokersfruitcatch.R
 
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
 
     private var gameThread: GameThread? = null
 
+    private var fruitSpawner: FruitSpawner? = null
+    private var screenWidth = 0
+    private var screenHeight = 0
+
+
+    private var fruitSize = 0f
+
+    private val bitmaps = mutableMapOf<FruitType, Bitmap>()
+
+
+    private var backgroundBitmap: Bitmap? = null
+
+
+    private val debugPaint = Paint().apply {
+        color = Color.WHITE
+        textSize = 50f
+        isAntiAlias = true
+    }
+
     init {
         holder.addCallback(this)
         isFocusable = true
+    }
+
+
+    private fun loadBitmaps(targetSize: Int) {
+        val rawIds = mapOf(
+            FruitType.APPLE      to R.drawable.apple,
+            FruitType.ORANGE     to R.drawable.orange,
+            FruitType.GRAPES     to R.drawable.grapes,
+            FruitType.STRAWBERRY to R.drawable.strawberry,
+            FruitType.BOMB       to R.drawable.bomb
+        )
+        rawIds.forEach { (type, resId) ->
+            bitmaps[type]?.recycle()
+            val raw = BitmapFactory.decodeResource(context.resources, resId)
+            bitmaps[type] = Bitmap.createScaledBitmap(raw, targetSize, targetSize, true)
+            if (raw != bitmaps[type]) raw.recycle()
+        }
     }
 
     inner class GameThread(private val surfaceHolder: SurfaceHolder) : Thread() {
@@ -64,7 +104,29 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        // Handle surface size changes here
+        screenWidth = width
+        screenHeight = height
+
+
+        if (backgroundBitmap == null || backgroundBitmap!!.width != width || backgroundBitmap!!.height != height) {
+            backgroundBitmap?.recycle()
+            val raw = BitmapFactory.decodeResource(context.resources, R.drawable.game_background)
+            backgroundBitmap = Bitmap.createScaledBitmap(raw, width, height, true)
+            if (raw != backgroundBitmap) raw.recycle()
+        }
+
+        val newFruitSize = (width * 0.15f).toInt().coerceAtLeast(60)
+        if (newFruitSize != fruitSize.toInt()) {
+            fruitSize = newFruitSize.toFloat()
+            loadBitmaps(newFruitSize)
+        }
+
+        if (fruitSpawner == null) {
+            fruitSpawner = FruitSpawner(screenWidth, fruitSize)
+        } else {
+            fruitSpawner?.screenWidth = screenWidth
+            fruitSpawner?.fruitSize = fruitSize
+        }
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
@@ -82,18 +144,36 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     private fun update() {
-        // Stub for game logic update (fruits, positions, collisions)
+        fruitSpawner?.update()
+        if (screenHeight > 0) {
+            fruitSpawner?.removeOffScreenFruits(screenHeight)
+        }
     }
 
     private fun drawOnCanvas(canvas: Canvas) {
-        // Draw standard background to verify rendering
-        canvas.drawColor(Color.DKGRAY)
-
-        val paint = Paint().apply {
-            color = Color.WHITE
-            textSize = 50f
-            isAntiAlias = true
+        // Draw background
+        val bg = backgroundBitmap
+        if (bg != null) {
+            canvas.drawBitmap(bg, 0f, 0f, null)
+        } else {
+            canvas.drawColor(Color.DKGRAY)
         }
-        canvas.drawText("Game Engine Running...", 100f, 200f, paint)
+
+        canvas.drawText(
+            "Fruits spawned: ${fruitSpawner?.activeFruits?.size ?: 0}",
+            50f, 100f, debugPaint
+        )
+
+        fruitSpawner?.activeFruits?.forEach { fruit ->
+            val bitmap = bitmaps[fruit.type]
+            if (bitmap != null) {
+                canvas.drawBitmap(
+                    bitmap,
+                    null,
+                    RectF(fruit.x, fruit.y, fruit.x + fruit.size, fruit.y + fruit.size),
+                    null
+                )
+            }
+        }
     }
 }

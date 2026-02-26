@@ -12,7 +12,9 @@ fun GameScreen() {
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
             factory = { context ->
-                GameView(context)
+                GameView(context).apply {
+                    onBasketMove = { x -> /* TODO: update ViewModel when implemented */ }
+                }
             },
             modifier = Modifier.fillMaxSize()
         )

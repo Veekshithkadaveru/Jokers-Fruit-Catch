@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import app.krafted.jokersfruitcatch.R
@@ -14,6 +15,13 @@ import app.krafted.jokersfruitcatch.R
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
 
     private var gameThread: GameThread? = null
+
+    var onBasketMove: ((Float) -> Unit)? = null
+    private var basketX: Float = 0f
+    private var basketWidth: Float = 0f
+    private var basketHeight: Float = 0f
+    private var basketY: Float = 0f
+    private var basketInitialized = false
 
     private var fruitSpawner: FruitSpawner? = null
     private var screenWidth = 0
@@ -26,11 +34,18 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
 
     private var backgroundBitmap: Bitmap? = null
+    private var basketBitmap: Bitmap? = null
 
 
     private val debugPaint = Paint().apply {
         color = Color.WHITE
         textSize = 50f
+        isAntiAlias = true
+    }
+
+    private val fallbackBasketPaint = Paint().apply {
+        color = Color.parseColor("#8B4513")
+        style = Paint.Style.FILL
         isAntiAlias = true
     }
 
@@ -107,12 +122,28 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         screenWidth = width
         screenHeight = height
 
+        basketWidth = width * 0.25f
+        basketHeight = basketWidth * 0.5f
+        basketY = height - basketHeight - 200f
+        if (!basketInitialized) {
+            basketX = (width - basketWidth) / 2f
+            basketInitialized = true
+        }
 
         if (backgroundBitmap == null || backgroundBitmap!!.width != width || backgroundBitmap!!.height != height) {
             backgroundBitmap?.recycle()
             val raw = BitmapFactory.decodeResource(context.resources, R.drawable.game_background)
             backgroundBitmap = Bitmap.createScaledBitmap(raw, width, height, true)
             if (raw != backgroundBitmap) raw.recycle()
+        }
+
+        if (basketBitmap == null || basketBitmap!!.width != basketWidth.toInt() || basketBitmap!!.height != basketHeight.toInt()) {
+            basketBitmap?.recycle()
+            val rawBasket = BitmapFactory.decodeResource(context.resources, R.drawable.basket)
+            if (rawBasket != null) {
+                basketBitmap = Bitmap.createScaledBitmap(rawBasket, basketWidth.toInt(), basketHeight.toInt(), true)
+                if (rawBasket != basketBitmap) rawBasket.recycle()
+            }
         }
 
         val newFruitSize = (width * 0.15f).toInt().coerceAtLeast(60)
@@ -175,5 +206,30 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 )
             }
         }
+
+        // Draw basket
+        val basketImg = basketBitmap
+        if (basketImg != null) {
+            canvas.drawBitmap(basketImg, basketX, basketY, null)
+        } else {
+
+            canvas.drawRoundRect(
+                RectF(basketX, basketY, basketX + basketWidth, basketY + basketHeight),
+                20f, 20f,
+                fallbackBasketPaint
+            )
+        }
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.action) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                var newX = event.x - (basketWidth / 2f)
+                newX = newX.coerceIn(0f, screenWidth - basketWidth.coerceAtLeast(1f))
+                basketX = newX
+                onBasketMove?.invoke(basketX)
+            }
+        }
+        return true
     }
 }

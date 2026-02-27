@@ -4,14 +4,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import app.krafted.jokersfruitcatch.ui.GameScreen
+import app.krafted.jokersfruitcatch.ui.StartScreen
 import app.krafted.jokersfruitcatch.ui.theme.JokersFruitCatchTheme
+import app.krafted.jokersfruitcatch.viewmodel.GameViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,24 +20,35 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             JokersFruitCatchTheme {
-                app.krafted.jokersfruitcatch.ui.GameScreen()
+                JokersFruitCatchApp()
             }
         }
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun JokersFruitCatchApp() {
+    val navController = rememberNavController()
+    val gameViewModel: GameViewModel = viewModel()
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    JokersFruitCatchTheme {
-        Greeting("Android")
+    NavHost(
+        navController = navController,
+        startDestination = "start"
+    ) {
+        composable("start") {
+            StartScreen(
+                highScore = 0,
+                onPlayClick = {
+                    gameViewModel.resetGame()
+                    navController.navigate("game") {
+                        popUpTo("start") { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+        composable("game") {
+            GameScreen(viewModel = gameViewModel)
+        }
     }
 }

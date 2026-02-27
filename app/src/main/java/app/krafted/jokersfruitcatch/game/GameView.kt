@@ -52,12 +52,16 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             FruitType.ORANGE to R.drawable.orange,
             FruitType.GRAPES to R.drawable.grapes,
             FruitType.STRAWBERRY to R.drawable.strawberry,
-            FruitType.BOMB to R.drawable.bomb
+            FruitType.BOMB to R.drawable.bomb_anim
         )
         rawIds.forEach { (type, resId) ->
             bitmaps[type]?.recycle()
             val raw = BitmapFactory.decodeResource(context.resources, resId)
-            bitmaps[type] = Bitmap.createScaledBitmap(raw, targetSize, targetSize, true)
+            if (type == FruitType.BOMB) {
+                bitmaps[type] = Bitmap.createScaledBitmap(raw, targetSize * 6, targetSize, true)
+            } else {
+                bitmaps[type] = Bitmap.createScaledBitmap(raw, targetSize, targetSize, true)
+            }
             if (raw != bitmaps[type]) raw.recycle()
         }
     }
@@ -212,15 +216,35 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             canvas.drawColor(Color.DKGRAY)
         }
 
+        val timeNow = System.currentTimeMillis()
         fruitSpawner?.activeFruits?.forEach { fruit ->
             val bitmap = bitmaps[fruit.type]
             if (bitmap != null) {
-                canvas.drawBitmap(
-                    bitmap,
-                    null,
-                    RectF(fruit.x, fruit.y, fruit.x + fruit.size, fruit.y + fruit.size),
-                    null
-                )
+                if (fruit.type == FruitType.BOMB) {
+                    val frameCount = 6
+                    val frameDuration = 100L
+                    val currentFrame = ((timeNow / frameDuration) % frameCount).toInt()
+                    val frameWidth = bitmap.width / frameCount
+                    val srcRect = android.graphics.Rect(
+                        currentFrame * frameWidth,
+                        0,
+                        (currentFrame + 1) * frameWidth,
+                        bitmap.height
+                    )
+                    canvas.drawBitmap(
+                        bitmap,
+                        srcRect,
+                        RectF(fruit.x, fruit.y, fruit.x + fruit.size, fruit.y + fruit.size),
+                        null
+                    )
+                } else {
+                    canvas.drawBitmap(
+                        bitmap,
+                        null,
+                        RectF(fruit.x, fruit.y, fruit.x + fruit.size, fruit.y + fruit.size),
+                        null
+                    )
+                }
             }
         }
 
@@ -236,9 +260,18 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
     }
 
-    fun applyDifficulty(speedMultiplier: Float, bombChanceMultiplier: Float) {
+    fun applyDifficulty(speedMultiplier: Float, bombChanceMultiplier: Float, spawnIntervalMs: Long = 900L) {
         fruitSpawner?.speedMultiplier = speedMultiplier
         fruitSpawner?.bombChanceMultiplier = bombChanceMultiplier
+        fruitSpawner?.spawnIntervalMs = spawnIntervalMs
+    }
+
+    fun setPaused(paused: Boolean) {
+        fruitSpawner?.paused = paused
+    }
+
+    fun clearFruits() {
+        fruitSpawner?.clearAllFruits()
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

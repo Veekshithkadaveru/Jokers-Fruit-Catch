@@ -7,13 +7,16 @@ class FruitSpawner(var screenWidth: Int, var fruitSize: Float = 150f) {
 
     val activeFruits: List<Fruit> get() = _activeFruits
     private var lastSpawnTime = 0L
-    private var spawnIntervalMs = 1000L
-    private var baseSpeed = 10f
-    
+    var spawnIntervalMs = 900L
+    private var baseSpeed = 12f
+
     var speedMultiplier = 1.0f
     var bombChanceMultiplier = 1.0f
+    var paused = false
 
     fun update() {
+        if (paused) return
+
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSpawnTime > spawnIntervalMs) {
             spawnFruit()
@@ -25,6 +28,10 @@ class FruitSpawner(var screenWidth: Int, var fruitSize: Float = 150f) {
             val fruit = iterator.next()
             fruit.y += fruit.speed * speedMultiplier
         }
+    }
+
+    fun clearAllFruits() {
+        _activeFruits.clear()
     }
 
     fun removeOffScreenFruits(screenHeight: Int) {

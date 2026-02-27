@@ -1,11 +1,11 @@
 package app.krafted.jokersfruitcatch.game
 
 enum class FruitType(val points: Int, val baseWeight: Int) {
-    APPLE(10, 40),
-    ORANGE(15, 30),
-    GRAPES(20, 18),
-    STRAWBERRY(25, 10),
-    BOMB(0, 2)
+    APPLE(10, 35),
+    ORANGE(15, 25),
+    GRAPES(20, 16),
+    STRAWBERRY(25, 8),
+    BOMB(0, 8)
 }
 
 data class Fruit(

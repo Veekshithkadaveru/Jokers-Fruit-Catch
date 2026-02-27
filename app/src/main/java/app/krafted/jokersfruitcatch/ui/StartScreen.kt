@@ -16,6 +16,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,7 +28,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,7 +39,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -62,6 +61,7 @@ import app.krafted.jokersfruitcatch.ui.theme.JokerOrange
 import app.krafted.jokersfruitcatch.ui.theme.JokerPink
 import app.krafted.jokersfruitcatch.ui.theme.JokerPurple
 import app.krafted.jokersfruitcatch.ui.theme.JokerPurpleDeep
+import kotlin.random.Random
 
 @Composable
 fun StartScreen(
@@ -154,6 +154,9 @@ fun StartScreen(
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
+
+        // ── Floating fruits background layer ──
+        FloatingFruitsLayer()
 
         Column(
             modifier = Modifier
@@ -366,7 +369,6 @@ fun StartScreen(
                         scaleY = playButtonScale
                     }
             ) {
-                // Outer glow layer (behind everything)
                 Canvas(
                     modifier = Modifier
                         .fillMaxWidth(0.78f)
@@ -387,7 +389,6 @@ fun StartScreen(
                     )
                 }
 
-                // Clickable button stack
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -407,7 +408,8 @@ fun StartScreen(
                         val h = size.height
                         val outerRadius = CornerRadius(h / 2, h / 2)
                         val innerInset = 5f
-                        val innerRadius = CornerRadius((h - innerInset * 2) / 2, (h - innerInset * 2) / 2)
+                        val innerRadius =
+                            CornerRadius((h - innerInset * 2) / 2, (h - innerInset * 2) / 2)
 
                         drawRoundRect(
                             color = Color(0xFF0D001A),
@@ -530,7 +532,6 @@ fun StartScreen(
                                 lineTo(size.width * 0.15f, size.height * 0.9f)
                                 close()
                             }
-                            // Shadow
                             drawPath(
                                 path = path,
                                 color = Color(0x88000000)
@@ -574,6 +575,98 @@ fun StartScreen(
             }
 
             Spacer(modifier = Modifier.weight(0.15f))
+        }
+    }
+}
+
+
+private data class FloatingFruit(
+    val drawableRes: Int,
+    val xFraction: Float,
+    val startDelay: Float,
+    val sizeDp: Int,
+    val speed: Float,
+    val swayAmount: Float,
+    val rotationSpeed: Float
+)
+
+@Composable
+private fun FloatingFruitsLayer() {
+    val fruitDrawables = listOf(
+        R.drawable.apple,
+        R.drawable.orange,
+        R.drawable.grapes,
+        R.drawable.strawberry
+    )
+
+    val fruits = remember {
+        val rng = Random(123)
+        List(12) {
+            FloatingFruit(
+                drawableRes = fruitDrawables[rng.nextInt(fruitDrawables.size)],
+                xFraction = rng.nextFloat(),
+                startDelay = rng.nextFloat(),
+                sizeDp = rng.nextInt(28, 56),
+                speed = 0.6f + rng.nextFloat() * 0.8f,
+                swayAmount = 8f + rng.nextFloat() * 20f,
+                rotationSpeed = (if (rng.nextBoolean()) 1f else -1f) * (60f + rng.nextFloat() * 120f)
+            )
+        }
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "floatingFruits")
+
+    val masterProgress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(8000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "masterFall"
+    )
+
+    val sway by infiniteTransition.animateFloat(
+        initialValue = -1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "sway"
+    )
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val screenWidthDp = maxWidth
+        val screenHeightDp = maxHeight
+
+        for (fruit in fruits) {
+
+            val fruitProgress = (masterProgress * fruit.speed + fruit.startDelay) % 1f
+
+            val yOffset = screenHeightDp * (fruitProgress * 1.4f - 0.2f)
+            val xBase = screenWidthDp * fruit.xFraction
+            val xSway = (fruit.swayAmount * sway).dp
+            val rotation = fruitProgress * fruit.rotationSpeed
+
+            val alpha = when {
+                fruitProgress < 0.1f -> fruitProgress / 0.1f * 0.35f
+                fruitProgress > 0.85f -> (1f - fruitProgress) / 0.15f * 0.35f
+                else -> 0.35f
+            }
+
+            Image(
+                painter = painterResource(id = fruit.drawableRes),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(fruit.sizeDp.dp)
+                    .offset(x = xBase + xSway, y = yOffset)
+                    .graphicsLayer {
+                        rotationZ = rotation
+                        this.alpha = alpha
+                    },
+                contentScale = ContentScale.Fit
+            )
         }
     }
 }

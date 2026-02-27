@@ -236,6 +236,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
     }
 
+    fun applyDifficulty(speedMultiplier: Float, bombChanceMultiplier: Float) {
+        fruitSpawner?.speedMultiplier = speedMultiplier
+        fruitSpawner?.bombChanceMultiplier = bombChanceMultiplier
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {

@@ -13,10 +13,19 @@ enum class GamePhase {
     GAME_OVER
 }
 
+data class DifficultyConfig(
+    val speedMultiplier: Float,
+    val bombChanceMultiplier: Float
+)
+
 class GameViewModel : ViewModel() {
 
     companion object {
         private const val INITIAL_LIVES = 3
+        private const val MAX_SPEED_MULTIPLIER = 1.7f
+        private const val SPEED_INCREMENT_PER_ROUND = 0.1f
+        private const val BOMB_INTRO_ROUND = 3
+        private const val MAX_DIFFICULTY_ROUND = 8
     }
 
     private val _score = MutableStateFlow(0)
@@ -36,6 +45,9 @@ class GameViewModel : ViewModel() {
 
     private val _gamePhase = MutableStateFlow(GamePhase.PLAYING)
     val gamePhase: StateFlow<GamePhase> = _gamePhase.asStateFlow()
+
+    private val _difficultyConfig = MutableStateFlow(computeDifficulty(1))
+    val difficultyConfig: StateFlow<DifficultyConfig> = _difficultyConfig.asStateFlow()
 
     fun onFruitCaught(type: FruitType) {
         if (_gamePhase.value != GamePhase.PLAYING) return
@@ -72,6 +84,7 @@ class GameViewModel : ViewModel() {
         _round.value += 1
         _roundScore.value = 0
         _multiplier.value = 1f
+        _difficultyConfig.value = computeDifficulty(_round.value)
         _gamePhase.value = GamePhase.PLAYING
     }
 
@@ -85,6 +98,28 @@ class GameViewModel : ViewModel() {
         _lives.value = INITIAL_LIVES
         _round.value = 1
         _multiplier.value = 1f
+        _difficultyConfig.value = computeDifficulty(1)
         _gamePhase.value = GamePhase.PLAYING
+    }
+
+    private fun computeDifficulty(round: Int): DifficultyConfig {
+        val effectiveRound = round.coerceAtMost(MAX_DIFFICULTY_ROUND)
+
+        // Speed: +10% per round, starting at 1.0, capped at 1.7
+        val speed = (1.0f + (effectiveRound - 1) * SPEED_INCREMENT_PER_ROUND)
+            .coerceAtMost(MAX_SPEED_MULTIPLIER)
+
+        // Bombs: disabled before round 3, then ramp up each round
+        val bombMultiplier = if (round < BOMB_INTRO_ROUND) {
+            0f
+        } else {
+            (round - BOMB_INTRO_ROUND + 1).toFloat()
+                .coerceAtMost((MAX_DIFFICULTY_ROUND - BOMB_INTRO_ROUND + 1).toFloat())
+        }
+
+        return DifficultyConfig(
+            speedMultiplier = speed,
+            bombChanceMultiplier = bombMultiplier
+        )
     }
 }

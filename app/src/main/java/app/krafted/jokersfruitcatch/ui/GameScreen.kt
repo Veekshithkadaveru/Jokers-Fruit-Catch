@@ -8,8 +8,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,6 +32,13 @@ fun GameScreen(viewModel: GameViewModel = viewModel()) {
     val lives by viewModel.lives.collectAsState()
     val round by viewModel.round.collectAsState()
     val gamePhase by viewModel.gamePhase.collectAsState()
+    val difficulty by viewModel.difficultyConfig.collectAsState()
+
+    var gameViewRef by remember { mutableStateOf<GameView?>(null) }
+
+    LaunchedEffect(difficulty) {
+        gameViewRef?.applyDifficulty(difficulty.speedMultiplier, difficulty.bombChanceMultiplier)
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
@@ -36,6 +47,8 @@ fun GameScreen(viewModel: GameViewModel = viewModel()) {
                     onFruitCaught = { type -> viewModel.onFruitCaught(type) }
                     onFruitMissed = { viewModel.onFruitMissed() }
                     onBombCaught = { viewModel.onBombCaught() }
+                    applyDifficulty(difficulty.speedMultiplier, difficulty.bombChanceMultiplier)
+                    gameViewRef = this
                 }
             },
             modifier = Modifier.fillMaxSize()

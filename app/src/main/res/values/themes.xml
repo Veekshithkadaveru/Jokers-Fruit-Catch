@@ -2,8 +2,11 @@
 <resources>
     <style name="Theme.JokersFruitCatch" parent="android:Theme.Material.Light.NoActionBar">
         <!-- Android 12+ Splash Screen Overrides -->
-        <item name="android:windowSplashScreenBackground">@android:color/white</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_dark</item>
         <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
         <item name="android:windowSplashScreenAnimationDuration">0</item>
+        <!-- Dark status bar / nav bar for the splash period -->
+        <item name="android:statusBarColor">@color/splash_dark</item>
+        <item name="android:navigationBarColor">@color/splash_dark</item>
     </style>
 </resources>

@@ -24,7 +24,17 @@ class CollisionEngine {
                     caught.add(fruit)
                 }
                 fruit.y > screenHeight -> {
-                    missed.add(fruit)
+                    // Swept check: if the fruit jumped past the basket this frame,
+                    // it was still catchable if it overlapped horizontally.
+                    val prevY = fruit.y - fruit.speed
+                    if (prevY + fruit.size < basketY + basketHeight &&
+                        fruit.x + fruit.size > basketX &&
+                        fruit.x < basketX + basketWidth
+                    ) {
+                        caught.add(fruit)
+                    } else {
+                        missed.add(fruit)
+                    }
                 }
             }
         }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.DisposableEffect
 import app.krafted.jokersfruitcatch.game.GameView
 import app.krafted.jokersfruitcatch.ui.theme.JokerGold
 import app.krafted.jokersfruitcatch.ui.theme.JokerOrange
@@ -70,6 +72,16 @@ fun GameScreen(
 
     var gameViewRef by remember { mutableStateOf<GameView?>(null) }
     var viewReady by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            gameViewRef?.setPaused(true)
+            gameViewRef?.clearFruits()
+            gameViewRef?.recycleBitmaps()
+            gameViewRef = null
+            viewReady = false
+        }
+    }
 
     //  Apply difficulty when it changes
     LaunchedEffect(difficulty, viewReady) {
@@ -97,6 +109,7 @@ fun GameScreen(
             }
 
             GamePhase.PLAYING -> {
+                gameViewRef?.clearFruits()
                 gameViewRef?.setPaused(false)
             }
 
@@ -243,75 +256,88 @@ private fun GameHUD(
     fruitsPerRound: Int,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // ── Round badge ──
-            HudBadge {
-                Text(
-                    text = "ROUND $round",
-                    style = TextStyle(
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 2.sp,
-                        color = JokerGold
-                    )
-                )
-            }
+    BoxWithConstraints(modifier = modifier) {
+        // Scale factor for small screens (< 320dp width)
+        val scaleFactor = (maxWidth / 360.dp).coerceIn(0.75f, 1f)
+        val heartSize = (18 * scaleFactor).toInt().coerceAtLeast(12)
+        val roundFontSize = 14.sp * scaleFactor
+        val scoreLabelSize = 12.sp * scaleFactor
+        val scoreValueSize = 18.sp * scaleFactor
+        val badgePaddingH = (14 * scaleFactor).dp
+        val badgePaddingV = (8 * scaleFactor).dp
 
-            // ── Score ──
-            HudBadge {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // ── Round badge ──
+                HudBadge(paddingH = badgePaddingH, paddingV = badgePaddingV) {
                     Text(
-                        text = "SCORE ",
+                        text = "ROUND $round",
                         style = TextStyle(
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFCCBBDD)
-                        )
-                    )
-                    Text(
-                        text = "$score",
-                        style = TextStyle(
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White
+                            fontSize = roundFontSize,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 2.sp,
+                            color = JokerGold
                         )
                     )
                 }
-            }
 
-            // ── Lives ──
-            HudBadge {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    for (i in 1..3) {
-                        HeartIcon(filled = i <= lives, size = 18)
+                // ── Score ──
+                HudBadge(paddingH = badgePaddingH, paddingV = badgePaddingV) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "SCORE ",
+                            style = TextStyle(
+                                fontSize = scoreLabelSize,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFCCBBDD)
+                            )
+                        )
+                        Text(
+                            text = "$score",
+                            style = TextStyle(
+                                fontSize = scoreValueSize,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White
+                            )
+                        )
+                    }
+                }
+
+                // ── Lives ──
+                HudBadge(paddingH = badgePaddingH, paddingV = badgePaddingV) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        for (i in 1..3) {
+                            HeartIcon(filled = i <= lives, size = heartSize)
+                        }
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // ── Round progress bar ──
+            RoundProgressBar(
+                current = fruitCount,
+                total = fruitsPerRound,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp)
+            )
         }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // ── Round progress bar ──
-        RoundProgressBar(
-            current = fruitCount,
-            total = fruitsPerRound,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp)
-        )
     }
 }
 
 @Composable
 private fun HudBadge(
+    paddingH: androidx.compose.ui.unit.Dp = 14.dp,
+    paddingV: androidx.compose.ui.unit.Dp = 8.dp,
     content: @Composable () -> Unit
 ) {
     Box(
@@ -354,7 +380,7 @@ private fun HudBadge(
                     style = Stroke(width = 1.dp.toPx())
                 )
             }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = paddingH, vertical = paddingV),
         contentAlignment = Alignment.Center
     ) {
         content()

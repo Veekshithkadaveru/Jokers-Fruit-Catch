@@ -4,47 +4,54 @@ import kotlin.random.Random
 
 class FruitSpawner(var screenWidth: Int, var fruitSize: Float = 150f) {
     private val _activeFruits = mutableListOf<Fruit>()
+    private val lock = Any()
 
-    val activeFruits: List<Fruit> get() = _activeFruits
+    val activeFruits: List<Fruit> get() = synchronized(lock) { _activeFruits.toList() }
     private var lastSpawnTime = 0L
     var spawnIntervalMs = 900L
     private var baseSpeed = 12f
 
     var speedMultiplier = 1.0f
     var bombChanceMultiplier = 1.0f
-    var paused = false
+    @Volatile var paused = false
 
     fun update() {
         if (paused) return
 
         val currentTime = System.currentTimeMillis()
-        if (currentTime - lastSpawnTime > spawnIntervalMs) {
-            spawnFruit()
-            lastSpawnTime = currentTime
-        }
+        synchronized(lock) {
+            if (currentTime - lastSpawnTime > spawnIntervalMs) {
+                spawnFruit()
+                lastSpawnTime = currentTime
+            }
 
-        val iterator = _activeFruits.iterator()
-        while (iterator.hasNext()) {
-            val fruit = iterator.next()
-            fruit.y += fruit.speed * speedMultiplier
+            for (fruit in _activeFruits) {
+                fruit.y += fruit.speed * speedMultiplier
+            }
         }
     }
 
     fun clearAllFruits() {
-        _activeFruits.clear()
+        synchronized(lock) {
+            _activeFruits.clear()
+        }
     }
 
     fun removeOffScreenFruits(screenHeight: Int) {
-        _activeFruits.removeAll { it.y > screenHeight.toFloat() }
+        synchronized(lock) {
+            _activeFruits.removeAll { it.y > screenHeight.toFloat() }
+        }
     }
 
     fun removeFruits(fruits: Collection<Fruit>) {
-        _activeFruits.removeAll(fruits.toSet())
+        synchronized(lock) {
+            _activeFruits.removeAll(fruits.toSet())
+        }
     }
 
     private fun spawnFruit() {
         if (screenWidth <= 0) return
-        
+
         val fruitType = getRandomFruitType()
         val x = Random.nextFloat() * (screenWidth - fruitSize).coerceAtLeast(0f)
         val speed = baseSpeed + Random.nextFloat() * 5f
@@ -54,14 +61,14 @@ class FruitSpawner(var screenWidth: Int, var fruitSize: Float = 150f) {
 
     private fun getRandomFruitType(): FruitType {
         val adjustedBombWeight = (FruitType.BOMB.baseWeight * bombChanceMultiplier).toInt()
-        val totalWeight = FruitType.values().sumOf { 
-            if (it == FruitType.BOMB) adjustedBombWeight else it.baseWeight 
+        val totalWeight = FruitType.entries.sumOf {
+            if (it == FruitType.BOMB) adjustedBombWeight else it.baseWeight
         }
-        
+
         if (totalWeight <= 0) return FruitType.APPLE
-        
+
         var randomValue = Random.nextInt(totalWeight)
-        for (type in FruitType.values()) {
+        for (type in FruitType.entries) {
             val weight = if (type == FruitType.BOMB) adjustedBombWeight else type.baseWeight
             if (randomValue < weight) {
                 return type

@@ -17,3 +17,7 @@ local.properties
 # Custom ignores
 /DEVELOPMENT_PLAN.md
 /Jok_N10_elements/
+*.jks
+*.keystore
+
+/app/release/

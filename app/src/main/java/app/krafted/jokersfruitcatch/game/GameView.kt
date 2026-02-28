@@ -56,22 +56,43 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         )
         rawIds.forEach { (type, resId) ->
             bitmaps[type]?.recycle()
-            val raw = BitmapFactory.decodeResource(context.resources, resId)
-            if (type == FruitType.BOMB) {
-                bitmaps[type] = Bitmap.createScaledBitmap(raw, targetSize * 6, targetSize, true)
-            } else {
-                bitmaps[type] = Bitmap.createScaledBitmap(raw, targetSize, targetSize, true)
+            // Decode with inSampleSize for memory efficiency
+            val opts = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
             }
-            if (raw != bitmaps[type]) raw.recycle()
+            BitmapFactory.decodeResource(context.resources, resId, opts)
+            val rawW = opts.outWidth
+            val rawH = opts.outHeight
+            val desiredW = if (type == FruitType.BOMB) targetSize * 6 else targetSize
+            opts.inSampleSize = calculateInSampleSize(rawW, rawH, desiredW, targetSize)
+            opts.inJustDecodeBounds = false
+            val raw = BitmapFactory.decodeResource(context.resources, resId, opts)
+            val scaled = Bitmap.createScaledBitmap(raw, desiredW, targetSize, true)
+            bitmaps[type] = scaled
+            if (raw != scaled) raw.recycle()
         }
+    }
+
+    private fun calculateInSampleSize(rawW: Int, rawH: Int, reqW: Int, reqH: Int): Int {
+        var inSampleSize = 1
+        if (rawH > reqH || rawW > reqW) {
+            val halfH = rawH / 2
+            val halfW = rawW / 2
+            while ((halfH / inSampleSize) >= reqH && (halfW / inSampleSize) >= reqW) {
+                inSampleSize *= 2
+            }
+        }
+        return inSampleSize
     }
 
     inner class GameThread(private val surfaceHolder: SurfaceHolder) : Thread() {
         var running = false
+        private val targetFrameTimeNs = 1_000_000_000L / 60L // 16.67ms in nanoseconds
 
         override fun run() {
+            var lastFrameTime = System.nanoTime()
             while (running) {
-                val startTime = System.currentTimeMillis()
+                val frameStart = System.nanoTime()
                 var canvas: Canvas? = null
 
                 try {
@@ -94,15 +115,17 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     }
                 }
 
-                val targetTime = 1000 / 60
-                val totalTime = System.currentTimeMillis() - startTime
-                if (totalTime < targetTime) {
+                val elapsed = System.nanoTime() - frameStart
+                val sleepTimeMs = (targetFrameTimeNs - elapsed) / 1_000_000L
+                if (sleepTimeMs > 0) {
                     try {
-                        sleep(targetTime - totalTime)
+                        sleep(sleepTimeMs)
                     } catch (e: InterruptedException) {
-                        e.printStackTrace()
+                        // Thread interrupted, exit gracefully
+                        break
                     }
                 }
+                lastFrameTime = frameStart
             }
         }
     }
@@ -127,7 +150,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         if (backgroundBitmap == null || backgroundBitmap!!.width != width || backgroundBitmap!!.height != height) {
             backgroundBitmap?.recycle()
-            val raw = BitmapFactory.decodeResource(context.resources, R.drawable.game_background)
+            val bgOpts = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            BitmapFactory.decodeResource(context.resources, R.drawable.game_background, bgOpts)
+            bgOpts.inSampleSize = calculateInSampleSize(bgOpts.outWidth, bgOpts.outHeight, width, height)
+            bgOpts.inJustDecodeBounds = false
+            val raw = BitmapFactory.decodeResource(context.resources, R.drawable.game_background, bgOpts)
             backgroundBitmap = Bitmap.createScaledBitmap(raw, width, height, true)
             if (raw != backgroundBitmap) raw.recycle()
         }
@@ -165,13 +194,22 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         gameThread?.running = false
         while (retry) {
             try {
-                gameThread?.join()
+                gameThread?.join(2000) // Timeout to prevent ANR
                 retry = false
             } catch (e: InterruptedException) {
                 e.printStackTrace()
             }
         }
         gameThread = null
+    }
+
+    fun recycleBitmaps() {
+        bitmaps.values.forEach { it.recycle() }
+        bitmaps.clear()
+        backgroundBitmap?.recycle()
+        backgroundBitmap = null
+        basketBitmap?.recycle()
+        basketBitmap = null
     }
 
     private fun update() {

@@ -1,10 +1,16 @@
 package app.krafted.jokersfruitcatch.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import app.krafted.jokersfruitcatch.data.AppDatabase
+import app.krafted.jokersfruitcatch.data.HighScore
 import app.krafted.jokersfruitcatch.game.FruitType
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 enum class GamePhase {
     PLAYING,
@@ -19,7 +25,18 @@ data class DifficultyConfig(
     val spawnIntervalMs: Long
 )
 
-class GameViewModel : ViewModel() {
+class GameViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val highScoreDao = AppDatabase.getDatabase(application).highScoreDao()
+
+    val topScores: Flow<List<HighScore>> = highScoreDao.getTopScores()
+    val highestScore: Flow<Int?> = highScoreDao.getHighestScore()
+
+    fun saveScore(highScore: HighScore) {
+        viewModelScope.launch {
+            highScoreDao.insert(highScore)
+        }
+    }
 
     companion object {
         private const val INITIAL_LIVES = 3

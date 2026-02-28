@@ -1,5 +1,6 @@
 package app.krafted.jokersfruitcatch.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -93,6 +94,9 @@ fun WheelScreen(
     var resultMultiplier by remember { mutableStateOf<Float?>(null) }
     var showResult by remember { mutableStateOf(false) }
     var spinCount by remember { mutableIntStateOf(0) }
+
+    // Disable back button during wheel — player must spin and continue
+    BackHandler(enabled = true) { /* consume back press */ }
 
     LaunchedEffect(spinCount) {
         if (spinCount == 0) return@LaunchedEffect

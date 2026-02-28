@@ -20,12 +20,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,17 +41,15 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.krafted.jokersfruitcatch.game.GameView
 import app.krafted.jokersfruitcatch.ui.theme.JokerGold
-import app.krafted.jokersfruitcatch.ui.theme.JokerGoldDark
 import app.krafted.jokersfruitcatch.ui.theme.JokerOrange
 import app.krafted.jokersfruitcatch.ui.theme.JokerPink
 import app.krafted.jokersfruitcatch.ui.theme.JokerPurple
-import app.krafted.jokersfruitcatch.ui.theme.JokerPurpleDeep
 import app.krafted.jokersfruitcatch.viewmodel.GamePhase
 import app.krafted.jokersfruitcatch.viewmodel.GameViewModel
 import kotlinx.coroutines.delay
@@ -64,54 +60,64 @@ fun GameScreen(
     onRoundEnd: () -> Unit = {},
     onGameOver: () -> Unit = {}
 ) {
-    val score by viewModel.score.collectAsState()
-    val roundScore by viewModel.roundScore.collectAsState()
-    val lives by viewModel.lives.collectAsState()
-    val round by viewModel.round.collectAsState()
-    val gamePhase by viewModel.gamePhase.collectAsState()
-    val difficulty by viewModel.difficultyConfig.collectAsState()
-    val fruitCount by viewModel.roundFruitCount.collectAsState()
+    val score by viewModel.score.collectAsStateWithLifecycle()
+    val roundScore by viewModel.roundScore.collectAsStateWithLifecycle()
+    val lives by viewModel.lives.collectAsStateWithLifecycle()
+    val round by viewModel.round.collectAsStateWithLifecycle()
+    val gamePhase by viewModel.gamePhase.collectAsStateWithLifecycle()
+    val difficulty by viewModel.difficultyConfig.collectAsStateWithLifecycle()
+    val fruitCount by viewModel.roundFruitCount.collectAsStateWithLifecycle()
 
     var gameViewRef by remember { mutableStateOf<GameView?>(null) }
     var viewReady by remember { mutableStateOf(false) }
 
-    // ── Apply difficulty when it changes ──
+    //  Apply difficulty when it changes
     LaunchedEffect(difficulty, viewReady) {
         if (!viewReady) return@LaunchedEffect
-        gameViewRef?.applyDifficulty(difficulty.speedMultiplier, difficulty.bombChanceMultiplier, difficulty.spawnIntervalMs)
+        gameViewRef?.applyDifficulty(
+            difficulty.speedMultiplier,
+            difficulty.bombChanceMultiplier,
+            difficulty.spawnIntervalMs
+        )
     }
 
-    // ── Pause/resume game based on phase (only after view is ready) ──
     LaunchedEffect(gamePhase, viewReady) {
         if (!viewReady) return@LaunchedEffect
         when (gamePhase) {
             GamePhase.WHEEL -> {
                 gameViewRef?.setPaused(true)
-                delay(800) // Brief pause to let player see "Round Complete"
+                delay(800)
                 onRoundEnd()
             }
+
             GamePhase.GAME_OVER -> {
                 gameViewRef?.setPaused(true)
                 delay(2000) // Show Game Over for 2 seconds
                 onGameOver()
             }
+
             GamePhase.PLAYING -> {
                 gameViewRef?.setPaused(false)
             }
-            else -> { /* RESULT handled by navigation */ }
+
+            else -> { /* RESULT handled by navigation */
+            }
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // ── Game SurfaceView ──
         AndroidView(
             factory = { context ->
                 GameView(context).apply {
                     onFruitCaught = { type -> viewModel.onFruitCaught(type) }
                     onFruitMissed = { viewModel.onFruitMissed() }
                     onBombCaught = { viewModel.onBombCaught() }
-                    applyDifficulty(difficulty.speedMultiplier, difficulty.bombChanceMultiplier, difficulty.spawnIntervalMs)
-                    // Ensure spawner starts in correct state for current phase
+                    applyDifficulty(
+                        difficulty.speedMultiplier,
+                        difficulty.bombChanceMultiplier,
+                        difficulty.spawnIntervalMs
+                    )
+
                     setPaused(gamePhase != GamePhase.PLAYING)
                     gameViewRef = this
                     viewReady = true
@@ -120,7 +126,6 @@ fun GameScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        // ── HUD Overlay ──
         GameHUD(
             score = score,
             lives = lives,
@@ -133,7 +138,6 @@ fun GameScreen(
                 .padding(top = 44.dp, start = 12.dp, end = 12.dp)
         )
 
-        // ── Round Complete overlay ──
         AnimatedVisibility(
             visible = gamePhase == GamePhase.WHEEL,
             enter = scaleIn(tween(400)) + fadeIn(tween(300)),
@@ -185,7 +189,6 @@ fun GameScreen(
             }
         }
 
-        // ── Game Over overlay ──
         AnimatedVisibility(
             visible = gamePhase == GamePhase.GAME_OVER,
             enter = scaleIn(tween(500)) + fadeIn(tween(400)),
@@ -230,9 +233,6 @@ fun GameScreen(
     }
 }
 
-// ═══════════════════════════════════════════
-//  Professional Game HUD
-// ═══════════════════════════════════════════
 
 @Composable
 private fun GameHUD(
@@ -318,7 +318,7 @@ private fun HudBadge(
         modifier = Modifier
             .clip(RoundedCornerShape(14.dp))
             .drawBehind {
-                // Frosted glass fill — layered for depth
+
                 drawRoundRect(
                     brush = Brush.verticalGradient(
                         listOf(
@@ -329,7 +329,7 @@ private fun HudBadge(
                     ),
                     cornerRadius = CornerRadius(14.dp.toPx())
                 )
-                // Glossy top highlight
+
                 drawRoundRect(
                     brush = Brush.verticalGradient(
                         listOf(
@@ -341,7 +341,7 @@ private fun HudBadge(
                     size = Size(size.width, size.height * 0.45f),
                     cornerRadius = CornerRadius(14.dp.toPx())
                 )
-                // Thin bright border
+
                 drawRoundRect(
                     brush = Brush.verticalGradient(
                         listOf(
@@ -412,7 +412,6 @@ private fun RoundProgressBar(
         val barHeight = size.height
         val cornerRad = CornerRadius(barHeight / 2, barHeight / 2)
 
-        // Frosted glass track (matching HUD badges)
         drawRoundRect(
             brush = Brush.verticalGradient(
                 listOf(
@@ -424,7 +423,6 @@ private fun RoundProgressBar(
             cornerRadius = cornerRad
         )
 
-        // Track border — thin glass edge
         drawRoundRect(
             brush = Brush.verticalGradient(
                 listOf(
@@ -437,7 +435,6 @@ private fun RoundProgressBar(
             style = Stroke(width = 1f)
         )
 
-        // Filled portion
         if (animatedProgress.value > 0f) {
             val fillWidth = barWidth * animatedProgress.value
             drawRoundRect(

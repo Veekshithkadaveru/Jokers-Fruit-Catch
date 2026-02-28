@@ -10,6 +10,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -66,7 +68,8 @@ import kotlin.random.Random
 @Composable
 fun StartScreen(
     highScore: Int = 0,
-    onPlayClick: () -> Unit
+    onPlayClick: () -> Unit,
+    onLeaderboardClick: () -> Unit
 ) {
 
     val mascotScale = remember { Animatable(0f) }
@@ -360,220 +363,259 @@ fun StartScreen(
             val pressYOffset = if (isPressed) 4f else 0f
             val pressShadowShrink = if (isPressed) 2f else 8f
 
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .alpha(buttonsAlpha.value)
-                    .graphicsLayer {
-                        scaleX = playButtonScale
-                        scaleY = playButtonScale
-                    }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxWidth(0.78f)
-                        .height(90.dp)
-                ) {
-                    // Diffuse colored glow
-                    drawRoundRect(
-                        brush = Brush.radialGradient(
-                            listOf(
-                                JokerGold.copy(alpha = glowAlpha * 0.3f),
-                                JokerOrange.copy(alpha = glowAlpha * 0.15f),
-                                Color.Transparent
-                            ),
-                            center = Offset(size.width / 2, size.height / 2),
-                            radius = size.width * 0.7f
-                        ),
-                        cornerRadius = CornerRadius(50f, 50f)
-                    )
-                }
-
+                // Primary Play Button
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .fillMaxWidth(0.72f)
-                        .height(76.dp)
+                        .alpha(buttonsAlpha.value)
                         .graphicsLayer {
-                            translationY = pressYOffset
+                            scaleX = playButtonScale
+                            scaleY = playButtonScale
                         }
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = null,
-                            onClick = onPlayClick
-                        )
                 ) {
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val w = size.width
-                        val h = size.height
-                        val outerRadius = CornerRadius(h / 2, h / 2)
-                        val innerInset = 5f
-                        val innerRadius =
-                            CornerRadius((h - innerInset * 2) / 2, (h - innerInset * 2) / 2)
-
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxWidth(0.78f)
+                            .height(90.dp)
+                    ) {
+                        // Diffuse colored glow
                         drawRoundRect(
-                            color = Color(0xFF0D001A),
-                            topLeft = Offset(0f, pressShadowShrink),
-                            size = Size(w, h),
-                            cornerRadius = outerRadius
-                        )
-
-                        drawRoundRect(
-                            brush = Brush.verticalGradient(
+                            brush = Brush.radialGradient(
                                 listOf(
-                                    Color(0xFFFFE566),
-                                    JokerGold,
-                                    JokerGoldDark,
-                                    Color(0xFF8B6914)
-                                )
-                            ),
-                            cornerRadius = outerRadius
-                        )
-
-                        drawRoundRect(
-                            brush = Brush.verticalGradient(
-                                listOf(
-                                    Color(0xFF180028),
-                                    Color(0xFF2A0048)
-                                )
-                            ),
-                            topLeft = Offset(3.5f, 3.5f),
-                            size = Size(w - 7f, h - 7f),
-                            cornerRadius = CornerRadius((h - 7f) / 2, (h - 7f) / 2)
-                        )
-
-                        drawRoundRect(
-                            brush = Brush.verticalGradient(
-                                listOf(
-                                    Color(0xFFB44FFF),
-                                    Color(0xFF8B2FC8),
-                                    JokerPurple,
-                                    Color(0xFF5A0B96),
-                                    JokerPurpleDeep
-                                )
-                            ),
-                            topLeft = Offset(innerInset, innerInset),
-                            size = Size(w - innerInset * 2, h - innerInset * 2),
-                            cornerRadius = innerRadius
-                        )
-
-                        drawRoundRect(
-                            brush = Brush.verticalGradient(
-                                listOf(
-                                    Color.White.copy(alpha = 0.35f),
-                                    Color.White.copy(alpha = 0.08f),
+                                    JokerGold.copy(alpha = glowAlpha * 0.3f),
+                                    JokerOrange.copy(alpha = glowAlpha * 0.15f),
                                     Color.Transparent
                                 ),
-                                startY = innerInset,
-                                endY = h * 0.55f
+                                center = Offset(size.width / 2, size.height / 2),
+                                radius = size.width * 0.7f
                             ),
-                            topLeft = Offset(innerInset + 4f, innerInset + 1f),
-                            size = Size(w - innerInset * 2 - 8f, (h - innerInset * 2) * 0.45f),
-                            cornerRadius = CornerRadius(innerRadius.x - 2f, innerRadius.y - 2f)
-                        )
-
-                        drawRoundRect(
-                            brush = Brush.verticalGradient(
-                                listOf(
-                                    Color.Transparent,
-                                    Color.Black.copy(alpha = 0.25f)
-                                ),
-                                startY = h * 0.65f,
-                                endY = h - innerInset
-                            ),
-                            topLeft = Offset(innerInset, h * 0.65f),
-                            size = Size(w - innerInset * 2, h * 0.35f - innerInset),
-                            cornerRadius = innerRadius
-                        )
-
-                        drawRoundRect(
-                            brush = Brush.horizontalGradient(
-                                listOf(
-                                    Color.Transparent,
-                                    JokerGold.copy(alpha = 0.4f),
-                                    JokerGold.copy(alpha = 0.6f),
-                                    JokerGold.copy(alpha = 0.4f),
-                                    Color.Transparent
-                                )
-                            ),
-                            topLeft = Offset(innerInset + 20f, innerInset),
-                            size = Size(w - innerInset * 2 - 40f, 2f),
-                            cornerRadius = CornerRadius(1f, 1f)
-                        )
-
-                        val shimmerX = shimmerOffset * w
-                        drawRoundRect(
-                            brush = Brush.horizontalGradient(
-                                listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(alpha = 0.06f),
-                                    Color.White.copy(alpha = 0.2f),
-                                    Color.White.copy(alpha = 0.06f),
-                                    Color.Transparent
-                                ),
-                                startX = shimmerX - 100f,
-                                endX = shimmerX + 100f
-                            ),
-                            topLeft = Offset(innerInset, innerInset),
-                            size = Size(w - innerInset * 2, h - innerInset * 2),
-                            cornerRadius = innerRadius
+                            cornerRadius = CornerRadius(50f, 50f)
                         )
                     }
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        // Play triangle icon
-                        Canvas(modifier = Modifier.size(22.dp)) {
-                            val path = androidx.compose.ui.graphics.Path().apply {
-                                moveTo(size.width * 0.15f, size.height * 0.1f)
-                                lineTo(size.width * 0.95f, size.height * 0.5f)
-                                lineTo(size.width * 0.15f, size.height * 0.9f)
-                                close()
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .fillMaxWidth(0.72f)
+                            .height(76.dp)
+                            .graphicsLayer {
+                                translationY = pressYOffset
                             }
-                            drawPath(
-                                path = path,
-                                color = Color(0x88000000)
+                            .clickable(
+                                interactionSource = interactionSource,
+                                indication = null,
+                                onClick = onPlayClick
                             )
-                            // Gold fill
-                            drawPath(
-                                path = path,
+                    ) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val w = size.width
+                            val h = size.height
+                            val outerRadius = CornerRadius(h / 2, h / 2)
+                            val innerInset = 5f
+                            val innerRadius =
+                                CornerRadius((h - innerInset * 2) / 2, (h - innerInset * 2) / 2)
+
+                            drawRoundRect(
+                                color = Color(0xFF0D001A),
+                                topLeft = Offset(0f, pressShadowShrink),
+                                size = Size(w, h),
+                                cornerRadius = outerRadius
+                            )
+
+                            drawRoundRect(
                                 brush = Brush.verticalGradient(
                                     listOf(
                                         Color(0xFFFFE566),
                                         JokerGold,
-                                        JokerGoldDark
+                                        JokerGoldDark,
+                                        Color(0xFF8B6914)
+                                    )
+                                ),
+                                cornerRadius = outerRadius
+                            )
+
+                            drawRoundRect(
+                                brush = Brush.verticalGradient(
+                                    listOf(
+                                        Color(0xFF180028),
+                                        Color(0xFF2A0048)
+                                    )
+                                ),
+                                topLeft = Offset(3.5f, 3.5f),
+                                size = Size(w - 7f, h - 7f),
+                                cornerRadius = CornerRadius((h - 7f) / 2, (h - 7f) / 2)
+                            )
+
+                            drawRoundRect(
+                                brush = Brush.verticalGradient(
+                                    listOf(
+                                        Color(0xFFB44FFF),
+                                        Color(0xFF8B2FC8),
+                                        JokerPurple,
+                                        Color(0xFF5A0B96),
+                                        JokerPurpleDeep
+                                    )
+                                ),
+                                topLeft = Offset(innerInset, innerInset),
+                                size = Size(w - innerInset * 2, h - innerInset * 2),
+                                cornerRadius = innerRadius
+                            )
+
+                            drawRoundRect(
+                                brush = Brush.verticalGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.35f),
+                                        Color.White.copy(alpha = 0.08f),
+                                        Color.Transparent
+                                    ),
+                                    startY = innerInset,
+                                    endY = h * 0.55f
+                                ),
+                                topLeft = Offset(innerInset + 4f, innerInset + 1f),
+                                size = Size(w - innerInset * 2 - 8f, (h - innerInset * 2) * 0.45f),
+                                cornerRadius = CornerRadius(innerRadius.x - 2f, innerRadius.y - 2f)
+                            )
+
+                            drawRoundRect(
+                                brush = Brush.verticalGradient(
+                                    listOf(
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.25f)
+                                    ),
+                                    startY = h * 0.65f,
+                                    endY = h - innerInset
+                                ),
+                                topLeft = Offset(innerInset, h * 0.65f),
+                                size = Size(w - innerInset * 2, h * 0.35f - innerInset),
+                                cornerRadius = innerRadius
+                            )
+
+                            drawRoundRect(
+                                brush = Brush.horizontalGradient(
+                                    listOf(
+                                        Color.Transparent,
+                                        JokerGold.copy(alpha = 0.4f),
+                                        JokerGold.copy(alpha = 0.6f),
+                                        JokerGold.copy(alpha = 0.4f),
+                                        Color.Transparent
+                                    )
+                                ),
+                                topLeft = Offset(innerInset + 20f, innerInset),
+                                size = Size(w - innerInset * 2 - 40f, 2f),
+                                cornerRadius = CornerRadius(1f, 1f)
+                            )
+
+                            val shimmerX = shimmerOffset * w
+                            drawRoundRect(
+                                brush = Brush.horizontalGradient(
+                                    listOf(
+                                        Color.Transparent,
+                                        Color.White.copy(alpha = 0.06f),
+                                        Color.White.copy(alpha = 0.2f),
+                                        Color.White.copy(alpha = 0.06f),
+                                        Color.Transparent
+                                    ),
+                                    startX = shimmerX - 100f,
+                                    endX = shimmerX + 100f
+                                ),
+                                topLeft = Offset(innerInset, innerInset),
+                                size = Size(w - innerInset * 2, h - innerInset * 2),
+                                cornerRadius = innerRadius
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            // Play triangle icon
+                            Canvas(modifier = Modifier.size(22.dp)) {
+                                val path = androidx.compose.ui.graphics.Path().apply {
+                                    moveTo(size.width * 0.15f, size.height * 0.1f)
+                                    lineTo(size.width * 0.95f, size.height * 0.5f)
+                                    lineTo(size.width * 0.15f, size.height * 0.9f)
+                                    close()
+                                }
+                                drawPath(
+                                    path = path,
+                                    color = Color(0x88000000)
+                                )
+                                // Gold fill
+                                drawPath(
+                                    path = path,
+                                    brush = Brush.verticalGradient(
+                                        listOf(
+                                            Color(0xFFFFE566),
+                                            JokerGold,
+                                            JokerGoldDark
+                                        )
+                                    )
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "PLAY",
+                                style = TextStyle(
+                                    fontSize = 30.sp,
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = 8.sp,
+                                    brush = Brush.verticalGradient(
+                                        listOf(
+                                            Color(0xFFFFE566),
+                                            JokerGold,
+                                            JokerOrange,
+                                            JokerGoldDark
+                                        )
+                                    ),
+                                    shadow = Shadow(
+                                        color = Color(0xDD000000),
+                                        offset = Offset(2f, 3f),
+                                        blurRadius = 5f
                                     )
                                 )
                             )
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = "PLAY",
-                            style = TextStyle(
-                                fontSize = 30.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 8.sp,
-                                brush = Brush.verticalGradient(
-                                    listOf(
-                                        Color(0xFFFFE566),
-                                        JokerGold,
-                                        JokerOrange,
-                                        JokerGoldDark
-                                    )
-                                ),
-                                shadow = Shadow(
-                                    color = Color(0xDD000000),
-                                    offset = Offset(2f, 3f),
-                                    blurRadius = 5f
-                                )
-                            )
-                        )
                     }
                 }
-            }
+                
+                Spacer(modifier = Modifier.height(24.dp))
 
+                // Secondary Button (Leaderboard) with Neon Cyberpunk Styling
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .alpha(buttonsAlpha.value)
+                        .fillMaxWidth(0.6f)
+                        .height(64.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(JokerPink.copy(alpha = 0.15f))
+                        .border(2.dp, JokerPink, RoundedCornerShape(12.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onLeaderboardClick
+                        )
+                ) {
+                    Text(
+                        text = "RANKS",
+                        style = TextStyle(
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 4.sp,
+                            color = JokerPink,
+                            shadow = Shadow(
+                                color = JokerPink.copy(alpha = 0.8f),
+                                blurRadius = 15f
+                            )
+                        )
+                    )
+                }
+            }
+            
             Spacer(modifier = Modifier.weight(0.15f))
         }
     }

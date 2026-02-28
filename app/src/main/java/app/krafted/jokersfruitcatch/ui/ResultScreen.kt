@@ -66,6 +66,11 @@ import app.krafted.jokersfruitcatch.ui.theme.JokerOrange
 import app.krafted.jokersfruitcatch.ui.theme.JokerPink
 import app.krafted.jokersfruitcatch.ui.theme.JokerPurple
 import app.krafted.jokersfruitcatch.ui.theme.JokerPurpleDeep
+import nl.dionsegijn.konfetti.compose.KonfettiView
+import nl.dionsegijn.konfetti.core.Party
+import nl.dionsegijn.konfetti.core.Position
+import nl.dionsegijn.konfetti.core.emitter.Emitter
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun ResultScreen(
@@ -73,6 +78,7 @@ fun ResultScreen(
     totalScore: Int,
     multiplier: Float,
     isGameOver: Boolean,
+    isNewHighScore: Boolean = false,
     onNextRoundClick: () -> Unit,
     onSaveScoreClick: (HighScore) -> Unit,
     onMainMenuClick: () -> Unit,
@@ -84,8 +90,7 @@ fun ResultScreen(
     var showSaveDialog by remember { mutableStateOf(false) }
     var playerName by remember { mutableStateOf("") }
     var scoreSaved by remember { mutableStateOf(false) }
-    
-    // Determine Joker Girl's reaction based on the multiplier and game state
+
     val reactionImageRes = if (isGameOver || multiplier < 1.0f) {
         R.drawable.joker_girl_sad
     } else if (multiplier >= 2.0f) {
@@ -336,6 +341,28 @@ fun ResultScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
+        }
+
+        // High Score Confetti
+        val showConfetti = remember { isNewHighScore }
+        if (showConfetti) {
+            val parties = remember {
+                listOf(
+                    Party(
+                        speed = 0f,
+                        maxSpeed = 30f,
+                        damping = 0.9f,
+                        spread = 360,
+                        colors = listOf(0xfce18a, 0xff726d, 0xf4306d, 0xb48def),
+                        emitter = Emitter(duration = 100, TimeUnit.MILLISECONDS).max(100),
+                        position = Position.Relative(0.5, 0.3)
+                    )
+                )
+            }
+            KonfettiView(
+                modifier = Modifier.fillMaxSize(),
+                parties = parties
+            )
         }
     }
 

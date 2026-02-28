@@ -5,18 +5,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import app.krafted.jokersfruitcatch.ui.GameScreen
+import app.krafted.jokersfruitcatch.ui.LeaderboardScreen
+import app.krafted.jokersfruitcatch.ui.ResultScreen
+import app.krafted.jokersfruitcatch.ui.SplashScreen
 import app.krafted.jokersfruitcatch.ui.StartScreen
 import app.krafted.jokersfruitcatch.ui.WheelScreen
-import app.krafted.jokersfruitcatch.ui.SplashScreen
-import app.krafted.jokersfruitcatch.ui.ResultScreen
-import app.krafted.jokersfruitcatch.ui.LeaderboardScreen
 import app.krafted.jokersfruitcatch.ui.theme.JokersFruitCatchTheme
 import app.krafted.jokersfruitcatch.viewmodel.GameViewModel
 
@@ -103,12 +103,17 @@ fun JokersFruitCatchApp() {
             val multiplier by gameViewModel.multiplier.collectAsStateWithLifecycle()
             val lives by gameViewModel.lives.collectAsStateWithLifecycle()
             val isGameOver = lives <= 0
+            val highestScore by gameViewModel.highestScore.collectAsStateWithLifecycle(initialValue = 0)
+
+            // Only trigger high score confetti if the player has actually played and beaten the top score
+            val isNewHighScore = isGameOver && score > 0 && score > (highestScore ?: 0)
 
             ResultScreen(
                 roundScore = roundScore,
                 totalScore = score,
                 multiplier = multiplier,
                 isGameOver = isGameOver,
+                isNewHighScore = isNewHighScore,
                 onNextRoundClick = {
                     gameViewModel.advanceRound()
                     navController.navigate("game") {
